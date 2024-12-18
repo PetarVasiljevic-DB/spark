@@ -493,8 +493,14 @@ object JdbcUtils extends Logging with SQLConfHelper {
       }
 
     case TimestampType =>
+      val getTimestamp = if (conf.doNotUseCalendar) {
+        (rs: ResultSet, pos: Int) => rs.getTimestamp(pos + 1)
+      } else {
+        val calendar = dialect.getDatabaseCalendar.orNull
+        (rs: ResultSet, pos: Int) => rs.getTimestamp(pos + 1, calendar)
+      }
       (rs: ResultSet, row: InternalRow, pos: Int) =>
-        val t = rs.getTimestamp(pos + 1)
+        val t = getTimestamp(rs, pos)
         if (t != null) {
           row.setLong(pos, fromJavaTimestamp(dialect.convertJavaTimestampToTimestamp(t)))
         } else {
@@ -671,12 +677,24 @@ object JdbcUtils extends Logging with SQLConfHelper {
         stmt.setBytes(pos + 1, row.getAs[Array[Byte]](pos))
 
     case TimestampType =>
-      if (conf.datetimeJava8ApiEnabled) {
-        (stmt: PreparedStatement, row: Row, pos: Int) =>
-          stmt.setTimestamp(pos + 1, toJavaTimestamp(instantToMicros(row.getAs[Instant](pos))))
+      if (conf.doNotUseCalendar) {
+        if (conf.datetimeJava8ApiEnabled) {
+          (stmt: PreparedStatement, row: Row, pos: Int) =>
+            stmt.setTimestamp(pos + 1, toJavaTimestamp(instantToMicros(row.getAs[Instant](pos))))
+        } else {
+          (stmt: PreparedStatement, row: Row, pos: Int) =>
+            stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos))
+        }
       } else {
-        (stmt: PreparedStatement, row: Row, pos: Int) =>
-          stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos))
+        val calendar = dialect.getDatabaseCalendar.orNull
+        if (conf.datetimeJava8ApiEnabled) {
+          (stmt: PreparedStatement, row: Row, pos: Int) =>
+            stmt.setTimestamp(pos + 1, toJavaTimestamp(instantToMicros(row.getAs[Instant](pos))),
+              calendar)
+        } else {
+          (stmt: PreparedStatement, row: Row, pos: Int) =>
+            stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos), calendar)
+        }
       }
 
     case TimestampNTZType =>

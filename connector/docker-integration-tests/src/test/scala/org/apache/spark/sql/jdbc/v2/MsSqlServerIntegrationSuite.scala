@@ -70,7 +70,10 @@ class MsSqlServerIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JD
     "scan with aggregate push-down: REGR_R2 with DISTINCT",
     "scan with aggregate push-down: REGR_R2 without DISTINCT",
     "scan with aggregate push-down: REGR_SXY with DISTINCT",
-    "scan with aggregate push-down: REGR_SXY without DISTINCT")
+    "scan with aggregate push-down: REGR_SXY without DISTINCT",
+    "CREATE TABLE with table comment",
+    "simple timestamps pushdown",
+    "simple timestamps pushdown")
 
   override val catalogName: String = "mssql"
   override val db = new MsSQLServerDatabaseOnDocker
@@ -160,6 +163,55 @@ class MsSqlServerIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JD
         |WHERE deptString = 'first'
         |""".stripMargin)
     assert(df.collect().length == 2)
+  }
+
+  test("simple timestamps pushdown for MSSQL") {
+    for (java8APIenabled <- Seq("false", "true")) {
+      withSQLConf(("spark.sql.session.timeZone", "America/Los_Angeles"),
+        (SQLConf.DATETIME_JAVA8API_ENABLED.key, java8APIenabled),
+        ("spark.sql.legacy.jdbc.doNotUseCalendar", "false")) {
+        withTable(s"$catalogName.timestamps") {
+          val tableName = "timestamps"
+          prepareTimestampTable(tableName)
+          val filteredNTZDf = sql(
+            s"""SELECT timestampntz FROM $catalogName.${caseConvert(tableName)}
+               |WHERE timestampntz = '2022-03-03 02:00:00'""".stripMargin)
+          val outputAfterFilterNTZ = filteredNTZDf.showString(20, 20)
+          assert(outputAfterFilterNTZ.contains("2022-03-03 02:00:00"))
+          assert(filteredNTZDf.collect().length == 1)
+        }
+      }
+      withSQLConf(("spark.sql.session.timeZone", "GMT"),
+        (SQLConf.DATETIME_JAVA8API_ENABLED.key, java8APIenabled),
+        ("spark.sql.legacy.jdbc.doNotUseCalendarlendar", "false")) {
+        withTable(s"$catalogName.timestamps") {
+          val tableName = "timestamps"
+          prepareTimestampTable(tableName)
+          val filteredNTZDf = sql(
+            s"""SELECT timestampntz FROM $catalogName.${caseConvert(tableName)}
+               |WHERE timestampntz = '2022-03-03 02:00:00'""".stripMargin)
+          val outputAfterFilterNTZ = filteredNTZDf.showString(20, 20)
+          assert(outputAfterFilterNTZ.contains("2022-03-03 02:00:00"))
+          assert(filteredNTZDf.collect().length == 1)
+        }
+      }
+      withDefaultTimeZone(ZoneId.of("GMT-2")) {
+        withSQLConf(("spark.sql.session.timeZone", "America/Los_Angeles"),
+          (SQLConf.DATETIME_JAVA8API_ENABLED.key, java8APIenabled),
+          ("spark.sql.legacy.jdbc.doNotUseCalendarlendar", "false")) {
+          withTable(s"$catalogName.timestamps") {
+            val tableName = "timestamps"
+            prepareTimestampTable(tableName)
+            val filteredNTZDf = sql(
+              s"""SELECT timestampntz FROM $catalogName.${caseConvert(tableName)}
+                 |WHERE timestampntz = '2022-03-03 02:00:00'""".stripMargin)
+            val outputAfterFilterNTZ = filteredNTZDf.showString(20, 20)
+            assert(outputAfterFilterNTZ.contains("2022-03-03 02:00:00"))
+            assert(filteredNTZDf.collect().length == 1)
+          }
+        }
+      }
+    }
   }
 
   test("SPARK-50087: SqlServer handle booleans in CASE WHEN test") {

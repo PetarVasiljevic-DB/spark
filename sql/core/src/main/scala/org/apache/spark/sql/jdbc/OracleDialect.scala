@@ -17,7 +17,7 @@
 
 package org.apache.spark.sql.jdbc
 
-import java.sql.{Date, SQLException, Timestamp, Types}
+import java.sql.{Connection, Date, SQLException, Timestamp, Types}
 import java.util.Locale
 
 import scala.util.control.NonFatal
@@ -156,6 +156,13 @@ private case class OracleDialect() extends JdbcDialect with SQLConfHelper with N
     cascade match {
       case Some(true) => s"TRUNCATE TABLE $table CASCADE"
       case _ => s"TRUNCATE TABLE $table"
+    }
+  }
+
+  override def beforeFetch(connection: Connection, properties: Map[String, String]): Unit = {
+    if (!conf.doNotUseCalendar) {
+      connection.prepareStatement(
+        s"ALTER SESSION SET time_zone='${conf.sessionLocalTimeZone}'").executeUpdate()
     }
   }
 

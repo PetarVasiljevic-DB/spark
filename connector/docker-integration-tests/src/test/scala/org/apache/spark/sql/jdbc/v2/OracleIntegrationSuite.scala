@@ -131,6 +131,29 @@ class OracleIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTes
 
   override def caseConvert(tableName: String): String = tableName.toUpperCase(Locale.ROOT)
 
+  override protected val timestampTZType: String = "TIMESTAMP WITH LOCAL TIME ZONE"
+
+  override protected def prepareTimestampTable(tableName: String, insert: Boolean = true): Unit = {
+    withConnection { conn =>
+      conn.prepareStatement(
+        s"""CREATE TABLE $tableName
+           |(timestampntz $timestampNTZType, timestamptz $timestampTZType)
+           |""".stripMargin).executeUpdate()
+      if (insert) {
+        conn.prepareStatement(
+          s"""
+             |insert into $tableName VALUES
+             |(TO_TIMESTAMP('2022-03-03 02:00:00', 'YYYY-DD-MM HH:MI:SS'),
+             |TO_TIMESTAMP_TZ('2022-03-03 02:00:00 +0:00', 'YYYY-DD-MM HH:MI:SS TZH:TZM')),
+             |(TO_TIMESTAMP('2022-03-02 02:00:00', 'YYYY-DD-MM HH:MI:SS'),
+             |TO_TIMESTAMP_TZ('2022-03-02 02:00:00 +2:00', 'YYYY-DD-MM HH:MI:SS TZH:TZM')),
+             |(TO_TIMESTAMP('2022-03-01 02:00:00', 'YYYY-DD-MM HH:MI:SS'),
+             |TO_TIMESTAMP_TZ('2022-03-01 02:00:00 +3:00', 'YYYY-DD-MM HH:MI:SS TZH:TZM'))
+             |""".stripMargin).executeUpdate()
+      }
+    }
+  }
+
   test("SPARK-46478: Revert SPARK-43049 to use varchar(255) for string") {
     val tableName = catalogName + ".t1"
     withTable(tableName) {

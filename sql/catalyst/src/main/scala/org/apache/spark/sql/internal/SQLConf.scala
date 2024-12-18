@@ -4346,6 +4346,18 @@ object SQLConf {
     .booleanConf
     .createWithDefault(false)
 
+  val DO_NOT_USE_CALENDAR = buildConf("spark.sql.legacy.jdbc.doNotUseCalendar")
+    .internal()
+    .doc("When reading timestamp NTZ columns from JDBC data source, user will see the " +
+      "values as they were shown in data source only if the JVM time zone is equal " +
+      "to the spark local session time zone. Since these two can differ, local session " +
+      "timezone calendar is used in rs.getTimestamp and rs.setTimestamp API calls. " +
+      "If this configuration is set to true no calendar will be provided to API. " +
+      "If set to false, calendar defined in corresponding jdbc dialect will be used.")
+    .version("4.0.0")
+    .booleanConf
+    .createWithDefault(true)
+
   val UI_EXPLAIN_MODE = buildConf("spark.sql.ui.explainMode")
     .doc("Configures the query explain mode used in the Spark SQL UI. The value can be 'simple', " +
       "'extended', 'codegen', 'cost', or 'formatted'. The default value is 'formatted'.")
@@ -6214,6 +6226,8 @@ class SQLConf extends Serializable with Logging with SqlApiConf {
     case "TIMESTAMP_NTZ" =>
       TimestampNTZType
   }
+
+  def doNotUseCalendar: Boolean = getConf(DO_NOT_USE_CALENDAR)
 
   def nestedSchemaPruningEnabled: Boolean = getConf(NESTED_SCHEMA_PRUNING_ENABLED)
 

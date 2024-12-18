@@ -160,6 +160,9 @@ class MySQLIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCTest
 
   override def indexOptions: String = "KEY_BLOCK_SIZE=10"
 
+  override protected val timestampNTZType: String = "DATETIME"
+  override protected val timestampTZType: String = "TIMESTAMP"
+
   test("SPARK-42943: Use LONGTEXT instead of TEXT for StringType for effective length") {
     val tableName = catalogName + ".t1"
     withTable(tableName) {

@@ -197,6 +197,11 @@ private case class PostgresDialect()
     if (properties.getOrElse(JDBCOptions.JDBC_BATCH_FETCH_SIZE, "0").toInt > 0) {
       connection.setAutoCommit(false)
     }
+
+    if (!conf.doNotUseCalendar) {
+      connection.prepareStatement(
+        s"SET TIME ZONE '${conf.sessionLocalTimeZone}'").executeUpdate()
+    }
   }
 
   // See https://www.postgresql.org/docs/12/sql-altertable.html

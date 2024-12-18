@@ -230,6 +230,9 @@ class PostgresIntegrationSuite extends DockerJDBCIntegrationV2Suite with V2JDBCT
 
   override def indexOptions: String = "FILLFACTOR=70"
 
+  override protected val timestampNTZType: String = "timestamp without time zone"
+  override protected val timestampTZType: String = "timestamp with time zone"
+
   test("SPARK-42964: SQLState: 42P07 - duplicated table") {
     val t1 = s"$catalogName.t1"
     val t2 = s"$catalogName.t2"
