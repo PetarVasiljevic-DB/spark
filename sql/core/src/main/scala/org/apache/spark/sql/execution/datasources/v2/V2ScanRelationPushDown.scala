@@ -112,10 +112,11 @@ object V2ScanRelationPushDown extends Rule[LogicalPlan] with PredicateHelper {
     // JOIN
     // (SELECT * FROM tbl t3 JOIN tbl3 t4) q
     // ON p.t1.col = q.t3.col (this is not possible)
-    // It's because there are 2 same tables in both sides of top level join and it not possible
-    // to fully qualified the column names in condition. Therefore, query should be rewritten so
-    // that each of the outputs of child joins are aliased, so there would be a projection
-    // with aliases between top level join and scanBuilderHolder (that has pushed child joins).
+    // It's because there are duplicated columns in both sides of top level join and it's not
+    // possible to fully qualified the column names in condition. Therefore, query should be
+    // rewritten so that each of the outputs of child joins are aliased, so there would be a
+    // projection with aliases between top level join and scanBuilderHolder (that has pushed
+    // child joins).
     case node @ Join(
       PhysicalOperation(
         leftProjections,

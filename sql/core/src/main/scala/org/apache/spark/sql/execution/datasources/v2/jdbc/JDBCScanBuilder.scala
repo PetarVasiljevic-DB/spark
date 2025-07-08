@@ -123,6 +123,9 @@ case class JDBCScanBuilder(
     }
   }
 
+  // TODO: We should check credentials are same in case they are not the part of URL. We should
+  // also check if joins are done on 2 tables from 2 different databases withing same host. These
+  // shouldn't be allowed.
   override def isOtherSideCompatibleForJoin(other: SupportsPushDownJoin): Boolean = {
     if (!jdbcOptions.pushDownJoin || !dialect.supportsJoin) {
       return false
@@ -131,7 +134,6 @@ case class JDBCScanBuilder(
     other.isInstanceOf[JDBCScanBuilder] &&
       jdbcOptions.url == other.asInstanceOf[JDBCScanBuilder].jdbcOptions.url
   };
-
 
   /**
    * Helper method to calculate StructType based on the SupportsPushDownJoin.ColumnWithAlias and
